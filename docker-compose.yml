@@ -1,6 +1,6 @@
 services:
   web:
-    image: sakinakazmi/notes-app:v1
+    image: sakinaabbas/notes-app:v1
     container_name: notes-web
     ports:
       - "8081:5000"
