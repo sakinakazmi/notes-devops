@@ -1,0 +1,40 @@
+services:
+  web-ci:
+    image: python:3.11-slim
+    container_name: notes-web-ci
+    working_dir: /app
+    volumes:
+      - ./:/app
+    command: sh -c "pip install --no-cache-dir -r requirements.txt && python app.py"
+    ports:
+      - "8082:5000"
+    environment:
+      DB_HOST: db-ci
+      DB_NAME: notesdb
+      DB_USER: notes
+      DB_PASSWORD: notes_pass
+      APP_ENV: "Part II (Jenkins)"
+      PYTHONDONTWRITEBYTECODE: "1"
+    depends_on:
+      db-ci:
+        condition: service_healthy
+
+  db-ci:
+    image: postgres:16-alpine
+    container_name: notes-db-ci
+    ports:
+      - "5434:5432"
+    environment:
+      POSTGRES_DB: notesdb
+      POSTGRES_USER: notes
+      POSTGRES_PASSWORD: notes_pass
+    volumes:
+      - notes_pgdata_ci:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U notes -d notesdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  notes_pgdata_ci:
