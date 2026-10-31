@@ -1,3 +1,15 @@
+// Returns the GitHub login that triggered this build ("" if not started by a push)
+def getPusher() {
+    def pusher = ''
+    for (cause in currentBuild.getBuildCauses()) {
+        def d = cause.shortDescription ?: ''
+        if (d.contains('GitHub push by ')) {
+            pusher = d.split('GitHub push by ')[1].trim()
+        }
+    }
+    return pusher
+}
+
 pipeline {
     agent any
 
@@ -57,12 +69,25 @@ pipeline {
 
     post {
         always {
-            emailext(
-                subject: '$PROJECT_NAME - Build #$BUILD_NUMBER - $BUILD_STATUS',
-                body: 'Build result: $BUILD_STATUS\nJob: $PROJECT_NAME\nBuild: #$BUILD_NUMBER\nURL: $BUILD_URL\n\nChanges:\n${CHANGES}\n\nLog (last lines):\n${BUILD_LOG, maxLines=40}',
-                recipientProviders: [developers(), requestor()],
-                to: 'sakinaabbas2017@gmail.com'
-            )
+            script {
+                def owner      = 'sakinakazmi'
+                def collab     = 'qasimalik@gmail.com'
+                def ownerEmail = 'sakinaabbas2017@gmail.com'
+                def pusher     = getPusher()
+
+                // Owner always gets the result. If someone else (the collaborator) pushed,
+                // the result is also emailed to the collaborator.
+                def recipients = ownerEmail
+                if (pusher && pusher != owner) {
+                    recipients = ownerEmail + ',' + collab
+                }
+
+                emailext(
+                    subject: '$PROJECT_NAME - Build #$BUILD_NUMBER - $BUILD_STATUS',
+                    body: 'Pushed by: ' + (pusher ?: 'manual run') + '\nBuild result: $BUILD_STATUS\nJob: $PROJECT_NAME\nBuild: #$BUILD_NUMBER\nURL: $BUILD_URL\n\nChanges:\n${CHANGES}\n\nLog (last lines):\n${BUILD_LOG, maxLines=40}',
+                    to: recipients
+                )
+            }
         }
     }
 }
